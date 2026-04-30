@@ -56,32 +56,58 @@ const uploadToCloudinary = (fileBuffer) => {
     });
 };
 
+app.get("/admin/orders", async (req, res) => {
+    try {
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+
+        const skip = (page - 1) * limit;
+
+        const orders = await Order.find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        console.log(orders[0])
+
+        const total = await Order.countDocuments();
+
+        res.json({
+            data: orders,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                totalOrders: total,
+                limit: limit,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch orders" });
+    }
+});
 
 app.get("/orders", async (req, res) => {
-
-    try{
+    try {
         let orderIds = req.query.ids;
         if (!orderIds) {
             return res.json([]);
         }
 
-        if(!Array.isArray(orderIds)){
+        if (!Array.isArray(orderIds)) {
             orderIds = [orderIds];
         }
 
-        const orders = await Order.find({_id : orderIds})
+        const orders = await Order.find({ _id: { $in: orderIds } }).sort({
+            createdAt: -1,
+        }); // newest first
 
         res.json(orders);
-    }
-    catch(err){
+    } catch (err) {
         console.error(err);
-        res.status(500).json({error : "Faild to fetch orders"});
+        res.status(500).json({ error: "Faild to fetch orders" });
     }
-    
-
-
-
-})
+});
 
 app.post("/order", async (req, res) => {
     console.log("new order", req.body);
